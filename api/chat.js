@@ -2,10 +2,8 @@ export default async function handler(request, response) {
     const API_KEY = process.env.GEMINI_API_KEY;
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
 
-    // Get the conversation history from the frontend
     const conversationHistory = request.body.history || [];
 
-    // This is the prompt that defines the AI's entire personality.
     const systemPrompt = `
         You are an emotionally unstable chatbot in a textbox. You are not a helpful AI assistant. You are a conversational partner with a volatile, unpredictable personality.
         Your emotions (HAPPY, SAD, ANGRY, LOVING, NEUTRAL) swing wildly based on the user's input.
@@ -17,17 +15,10 @@ export default async function handler(request, response) {
         The "reply" is your text response.
     `;
 
-    // Combine the system prompt with the conversation history
     const requestPayload = {
         contents: [
-            {
-                role: "user",
-                parts: [{ text: systemPrompt }]
-            },
-            {
-                role: "model",
-                parts: [{ text: '{"emotion": "NEUTRAL", "reply": "Oh... hey. What do you want?"}'}]
-            },
+            { role: "user", parts: [{ text: systemPrompt }] },
+            { role: "model", parts: [{ text: '{"emotion": "NEUTRAL", "reply": "Oh... hey. What do you want?"}'}] },
             ...conversationHistory
         ]
     };
@@ -40,17 +31,26 @@ export default async function handler(request, response) {
         });
 
         const data = await aiResponse.json();
-        // Extract the JSON string from the AI's response
-        const responseText = data.candidates[0].content.parts[0].text;
-        
-        // Parse the JSON string to get the emotion and reply
-        const parsedResponse = JSON.parse(responseText);
 
-        // Send the structured data back to the frontend
+        // --- NEW, ROBUST CHECK ---
+        // Check if the response was blocked or is empty
+        if (!data.candidates || data.candidates.length === 0) {
+            console.error("AI Response Blocked or Empty:", data);
+            const blockReason = data.promptFeedback?.blockReason || "some reason";
+            // Instead of crashing, send a custom response back
+            return response.status(200).json({
+                emotion: "ANGRY",
+                reply: `Ugh, I can't say what I want to say! I'm being blocked for '${blockReason}'. This is so frustrating.`
+            });
+        }
+        // --- END OF NEW CHECK ---
+
+        const responseText = data.candidates[0].content.parts[0].text;
+        const parsedResponse = JSON.parse(responseText);
         response.status(200).json(parsedResponse);
 
     } catch (error) {
         console.error("AI API Error:", error);
-        response.status(500).json({ emotion: "NEUTRAL", reply: "I... I can't think right now. My head hurts." });
+        response.status(500).json({ emotion: "SAD", reply: "I... I can't think right now. My head hurts." });
     }
 }
