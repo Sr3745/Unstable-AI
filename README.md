@@ -41,12 +41,12 @@ For Software:
 Installation
 To set up this project for your own deployment, you need to clone the repository and deploy it to a service like Vercel that supports serverless functions.
 
-# 1. Clone the repository from GitHub
+1. Clone the repository from GitHub
 git clone https://github.com/YourUsername/your-repo-name.git
 
-# 2. Add your API Key to Vercel as an Environment Variable
-# NAME: GEMINI_API_KEY
-# VALUE: [Your Secret API Key]
+2. Add your API Key to Vercel as an Environment Variable
+NAME: GEMINI_API_KEY
+VALUE: [Your Secret API Key]
 
 Run
 The project is a web application and runs directly on the URL provided by the Vercel deployment. No local run command is needed.
