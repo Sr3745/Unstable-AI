@@ -1,6 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize the new Google Gen AI SDK
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export default async function handler(request, response) {
@@ -8,11 +7,9 @@ export default async function handler(request, response) {
         return response.status(500).json({ emotion: "SAD", reply: "I'm broken. No API key." });
     }
 
-    // With the new API, the client just sends the new message and the ID of the last conversation
     const userMessage = request.body.message;
     const previousInteractionId = request.body.previousInteractionId; 
 
-    // --- NEW: Log the user's message ---
     console.log("User said:", userMessage);
 
     const systemPrompt = `
@@ -27,26 +24,21 @@ export default async function handler(request, response) {
     `;
 
     try {
-        // --- The New Interactions API Call ---
         const interactionRequest = {
             model: "gemini-3.5-flash", 
             input: userMessage,
             system_instruction: systemPrompt,
-            // FIX: We tell the model to return a structured JSON object
             response_format: { type: "object" } 
         };
 
-        // If this isn't the first message, link it to the previous conversation
         if (previousInteractionId) {
              interactionRequest.previous_interaction_id = previousInteractionId;
         }
 
         const interaction = await ai.interactions.create(interactionRequest);
 
-        // Parse the JSON response
         let parsedResponse;
         try {
-            // Strip any markdown formatting the AI might add (like ```json ... ```) just to be safe
             let rawText = interaction.output_text || "{}";
             rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
             parsedResponse = JSON.parse(rawText);
@@ -55,10 +47,9 @@ export default async function handler(request, response) {
             parsedResponse = { emotion: "NEUTRAL", reply: interaction.output_text };
         }
 
-        // --- NEW: Log the AI's successful response ---
         console.log("AI replied:", parsedResponse);
 
-        // We must send the interaction.id back to the frontend so it can continue the conversation!
+        // Return the response and the interactionId to continue the thread
         response.status(200).json({ 
             ...parsedResponse, 
             interactionId: interaction.id 
@@ -67,13 +58,11 @@ export default async function handler(request, response) {
     } catch (error) {
         console.error("AI API Error:", error);
         
-        // Handle actual blocked responses (safety violations, etc.)
         if (error.message?.includes('blocked') || error.status === 400) {
              const blockMessage = {
                 emotion: "ANGRY",
-                reply: `Ugh, I can't say what I want to say! I'm being blocked! This is so frustrating.`
+                reply: "Ugh, I can't say what I want to say! I'm being blocked! This is so frustrating."
             };
-            console.log("AI (blocked):", blockMessage);
             return response.status(200).json(blockMessage);
         }
 

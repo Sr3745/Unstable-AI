@@ -1,89 +1,75 @@
-const chatBox = document.getElementById('chat-box');
-const chatForm = document.getElementById('chat-form');
-const userInput = document.getElementById('user-input');
-const moodEmoji = document.getElementById('mood-emoji');
-const body = document.body;
+// This tracks the server-side conversation ID
+let currentInteractionId = null;
 
-// A map to connect emotion strings to emojis and CSS classes
-const moodMap = {
-    'HAPPY': { emoji: '😄', class: 'mood-happy' },
-    'SAD': { emoji: '😢', class: 'mood-sad' },
-    'ANGRY': { emoji: '😠', class: 'mood-angry' },
-    'LOVING': { emoji: '🥰', class: 'mood-loving' },
-    'NEUTRAL': { emoji: '😐', class: 'mood-neutral' }
+const chatBox = document.getElementById("chat-box");
+const messageInput = document.getElementById("message-input");
+const sendButton = document.getElementById("send-btn");
+const avatar = document.getElementById("avatar");
+
+// Map emotions to corresponding emojis
+const emotionEmojis = {
+    NEUTRAL: "😐",
+    HAPPY: "😊",
+    SAD: "😭",
+    ANGRY: "😡",
+    LOVING: "🥰"
 };
 
-// Stores the entire conversation for context
-let conversationHistory = [];
+async function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text) return;
 
-// Function to add a message to the chat box
-function addMessage(text, sender) {
-    const message = document.createElement('div');
-    message.classList.add('message', `${sender}-message`);
-    message.textContent = text;
-    chatBox.appendChild(message);
-    chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to bottom
-}
+    // 1. Append User Message
+    appendMessage(text, "user");
+    messageInput.value = "";
 
-// Function to update the AI's mood
-function updateMood(emotion) {
-    const mood = moodMap[emotion] || moodMap['NEUTRAL'];
-    moodEmoji.textContent = mood.emoji;
-    body.className = ''; // Clear previous mood classes
-    body.classList.add(mood.class);
-}
-
-// Handle form submission
-chatForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const userMessage = userInput.value.trim();
-    if (!userMessage) return;
-
-    addMessage(userMessage, 'user');
-    // Add user's message to history for the AI's context
-    conversationHistory.push({ role: "user", parts: [{ text: userMessage }] });
-    userInput.value = '';
-
-    // Show a "typing..." indicator
-    const typingIndicator = document.createElement('div');
-    typingIndicator.classList.add('message', 'ai-message', 'typing-indicator');
-    typingIndicator.textContent = '...';
-    chatBox.appendChild(typingIndicator);
-    chatBox.scrollTop = chatBox.scrollHeight;
+    // 2. Show Loading State
+    const loadingDiv = appendMessage("Thinking...", "ai loading");
 
     try {
-        // Send conversation history to our backend
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ history: conversationHistory })
+        // 3. Post to our backend Vercel function
+        const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                message: text,
+                previousInteractionId: currentInteractionId // Pass the history link
+            })
         });
 
         const data = await response.json();
-        const { emotion, reply } = data;
-        
-        // Remove typing indicator and add AI's real message
-        chatBox.removeChild(typingIndicator);
-        addMessage(reply, 'ai');
-        
-        // Add AI's response to history
-        conversationHistory.push({ role: "model", parts: [{ text: JSON.stringify(data) }] });
-        
-        // Update the mood
-        updateMood(emotion);
+        loadingDiv.remove();
+
+        // 4. Update the Avatar Emoji based on the AI's current mood
+        if (data.emotion && emotionEmojis[data.emotion]) {
+            avatar.textContent = emotionEmojis[data.emotion];
+        }
+
+        // 5. Append AI Reply
+        appendMessage(data.reply || "...", "ai");
+
+        // 6. Save the interaction ID for the next message loop!
+        if (data.interactionId) {
+            currentInteractionId = data.interactionId;
+        }
 
     } catch (error) {
-        chatBox.removeChild(typingIndicator);
-        addMessage("Sorry, I'm feeling a bit broken right now.", 'ai');
-        console.error("Error:", error);
+        console.error("Error sending message:", error);
+        loadingDiv.remove();
+        appendMessage("System error... even I messed up.", "ai");
     }
-});
-
-// Initial greeting from the AI
-function initialGreeting() {
-    const firstMessage = "Oh... hey. What do you want?";
-    addMessage(firstMessage, 'ai');
-    conversationHistory.push({ role: "model", parts: [{ text: JSON.stringify({ emotion: "NEUTRAL", reply: firstMessage }) }] });
 }
 
-initialGreeting();
+function appendMessage(text, sender) {
+    const msgDiv = document.createElement("div");
+    msgDiv.className = `message ${sender}`;
+    msgDiv.textContent = text;
+    chatBox.appendChild(msgDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return msgDiv;
+}
+
+sendButton.addEventListener("click", sendMessage);
+messageInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") sendMessage();
+});

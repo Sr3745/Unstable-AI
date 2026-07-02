@@ -6,15 +6,18 @@
     <title>Emotionally Unstable AI</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="mood-neutral">
+<body>
     <div class="chat-container">
-        <div class="mood-display" id="mood-emoji">😐</div>
+        <div class="chat-header">
+            <span id="avatar">😐</span>
+        </div>
         <div class="chat-box" id="chat-box">
-            </div>
-        <form class="chat-form" id="chat-form">
-            <input type="text" id="user-input" placeholder="Say something..." autocomplete="off" required>
-            <button type="submit">Send</button>
-        </form>
+            <div class="message ai">Oh... hey. What do you want?</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="message-input" placeholder="Say something..." autocomplete="off">
+            <button id="send-btn">Send</button>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
