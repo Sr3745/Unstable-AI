@@ -27,8 +27,8 @@ export default async function handler(request, response) {
         const interactionRequest = {
             model: "gemini-3.5-flash", 
             input: userMessage,
-            system_instruction: systemPrompt,
-            response_format: { type: "object" } 
+            system_instruction: systemPrompt
+            // I REMOVED the response_format line completely here!
         };
 
         if (previousInteractionId) {
@@ -49,7 +49,6 @@ export default async function handler(request, response) {
 
         console.log("AI replied:", parsedResponse);
 
-        // Return the response and the interactionId to continue the thread
         response.status(200).json({ 
             ...parsedResponse, 
             interactionId: interaction.id 
