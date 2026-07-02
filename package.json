@@ -1,8 +1,8 @@
-{
-  "name": "unstable-ai",
-  "version": "1.0.0",
-  "type": "module",
-  "dependencies": {
-    "@google/genai": "^2.3.0"
-  }
-}
+// --- The New Interactions API Call ---
+        const interactionRequest = {
+            model: "gemini-3.5-flash", 
+            input: userMessage,
+            system_instruction: systemPrompt,
+            // --- THIS LINE IS THE FIX ---
+            response_format: { type: "text", mime_type: "application/json" } 
+        };
