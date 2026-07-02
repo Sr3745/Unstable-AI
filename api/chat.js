@@ -29,10 +29,11 @@ export default async function handler(request, response) {
     try {
         // --- The New Interactions API Call ---
         const interactionRequest = {
-            model: "gemini-3.5-flash", // Using the latest model from your screenshot
+            model: "gemini-3.5-flash", 
             input: userMessage,
             system_instruction: systemPrompt,
-            response_format: { type: "json" } // Ensure we always get JSON back
+            // FIX: We tell the model to return a structured JSON object
+            response_format: { type: "object" } 
         };
 
         // If this isn't the first message, link it to the previous conversation
@@ -45,7 +46,10 @@ export default async function handler(request, response) {
         // Parse the JSON response
         let parsedResponse;
         try {
-            parsedResponse = JSON.parse(interaction.output_text);
+            // Strip any markdown formatting the AI might add (like ```json ... ```) just to be safe
+            let rawText = interaction.output_text || "{}";
+            rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+            parsedResponse = JSON.parse(rawText);
         } catch (e) {
             console.error("Failed to parse JSON response:", interaction.output_text);
             parsedResponse = { emotion: "NEUTRAL", reply: interaction.output_text };
@@ -63,7 +67,7 @@ export default async function handler(request, response) {
     } catch (error) {
         console.error("AI API Error:", error);
         
-        // Handle blocked responses (safety violations, etc.)
+        // Handle actual blocked responses (safety violations, etc.)
         if (error.message?.includes('blocked') || error.status === 400) {
              const blockMessage = {
                 emotion: "ANGRY",
