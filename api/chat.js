@@ -27,8 +27,16 @@ export default async function handler(request, response) {
         const interactionRequest = {
             model: "gemini-3.5-flash", 
             input: userMessage,
-            system_instruction: systemPrompt
-            // I REMOVED the response_format line completely here!
+            system_instruction: systemPrompt,
+            // We give the AI the exact blueprint of the JSON object it must return
+            response_format: { 
+                type: "object",
+                properties: {
+                    emotion: { type: "string" },
+                    reply: { type: "string" }
+                },
+                required: ["emotion", "reply"]
+            }
         };
 
         if (previousInteractionId) {
